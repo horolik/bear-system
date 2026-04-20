@@ -13,7 +13,6 @@ body {
  overflow: hidden;
 }
 
-/* MATRIX */
 #matrix {
  position: fixed;
  top: 0;
@@ -23,7 +22,6 @@ body {
  z-index: 0;
 }
 
-/* TERMINAL */
 #terminal {
  position: fixed;
  inset: 0;
@@ -50,7 +48,6 @@ body {
  font-family: monospace;
 }
 
-/* GAME */
 #app {
  position: relative;
  z-index: 2;
@@ -69,11 +66,18 @@ body {
  padding: 8px;
  border: 1px solid #00ff9f55;
  cursor: pointer;
+ width: 180px;
 }
 
-.legendary {
- border: 1px solid gold;
- color: gold;
+.small {
+ font-size: 12px;
+ opacity: 0.8;
+}
+
+#lore {
+ margin-bottom: 10px;
+ border: 1px dashed #00ff9f55;
+ padding: 10px;
 }
 </style>
 </head>
@@ -82,7 +86,6 @@ body {
 
 <canvas id="matrix"></canvas>
 
-<!-- TERMINAL -->
 <div id="terminal">
   <div id="terminalText"></div>
 
@@ -91,14 +94,20 @@ body {
   </div>
 </div>
 
-<!-- GAME -->
 <div id="app">
+
 <h1>🐻 Artem vs Production Server</h1>
+
+<div id="lore">
+<b>Артём</b> — инженер, который выживает в продакшене, где всё ломается само.<br>
+Он не чинит систему. Он её переживает.
+</div>
 
 <div id="battle">
   <p>Artem HP: <span id="playerHp">10</span></p>
   <p>Server HP: <span id="enemyHp">20</span></p>
   <p>Mana: <span id="mana">0</span></p>
+  <p id="bossState" style="color:#ff4d4d;"></p>
 
   <hr>
 
@@ -106,9 +115,11 @@ body {
 
   <button id="endTurn">End Turn</button>
 </div>
+
 </div>
 
 <script>
+
 /* ================= MATRIX ================= */
 const canvas = document.getElementById("matrix");
 const ctx = canvas.getContext("2d");
@@ -140,133 +151,143 @@ function matrix(){
 }
 setInterval(matrix, 33);
 
-/* ================= TERMINAL ================= */
-const terminal = document.getElementById("terminal");
-const terminalText = document.getElementById("terminalText");
-const input = document.getElementById("commandInput");
-const inputLine = document.getElementById("inputLine");
-
-const lines = [
- "Booting Artem System...",
- "Loading modules...",
- "Detecting user: Артём",
- "Connecting to Production Server...",
- "⚠️ Critical bugs detected",
- "",
- "Type 'start' to begin"
-];
-
-let i = 0;
-
-function type(){
- if(i < lines.length){
-   terminalText.innerText += lines[i] + "\n";
-   i++;
-   setTimeout(type, 500);
- } else {
-   inputLine.style.display = "block";
-   input.focus();
- }
-}
-type();
-
-input.addEventListener("keydown", e=>{
- if(e.key === "Enter"){
-   const cmd = input.value.trim().toLowerCase();
-
-   terminalText.innerText += "> " + cmd + "\n";
-
-   if(cmd === "start"){
-     terminalText.innerText += "Launching...\n";
-
-     setTimeout(()=>{
-       terminal.style.display = "none";
-       startGame();
-     }, 800);
-   } else {
-     terminalText.innerText += "command not found\n";
-   }
-
-   input.value = "";
- }
-});
-
-/* ================= GAME ================= */
+/* ================= GAME STATE ================= */
 let playerHp = 10;
 let enemyHp = 20;
 let mana = 0;
 let turn = 1;
+
+let bossMode = false;
+let bugLog = 0;
+let legacy = 0;
 
 const playerHpEl = document.getElementById("playerHp");
 const enemyHpEl = document.getElementById("enemyHp");
 const manaEl = document.getElementById("mana");
 const hand = document.getElementById("hand");
 const endTurn = document.getElementById("endTurn");
+const bossState = document.getElementById("bossState");
 
+/* ================= CARDS ================= */
 const deck = [
- { name:"🐛 Bug Fix", cost:1, dmg:1 },
- { name:"🔥 Hotfix", cost:2, dmg:3 },
- { name:"💀 Leak", cost:3, dmg:5 },
- { name:"🔄 Rollback", cost:2, dmg:2 },
- { name:"💙 From Dev Who Cares", cost:0, dmg:999, secret:true }
+ {
+  name:"🐛 Bug Fix",
+  cost:1,
+  dmg:1,
+  desc:"Локальный фикс, который создаёт новый баг"
+ },
+ {
+  name:"🔥 Hotfix",
+  cost:2,
+  dmg:3,
+  desc:"Быстрое исправление без тестов"
+ },
+ {
+  name:"💀 Leak",
+  cost:3,
+  dmg:5,
+  desc:"Память утекает как зарплата после деплоя"
+ },
+ {
+  name:"🔄 Rollback",
+  cost:2,
+  dmg:2,
+  desc:"Откат + новые неожиданные баги"
+ }
 ];
 
+/* ================= START ================= */
 function startGame(){
  draw();
  update();
 }
 
+/* ================= DRAW ================= */
 function draw(){
  hand.innerHTML = "";
 
  deck.forEach(card=>{
 
-   if(card.secret && playerHp > 5) return;
-
    const el = document.createElement("div");
    el.className = "card";
 
-   if(card.secret){
-     el.innerText = "???";
-     el.style.border = "1px solid #ff4da6";
-     el.style.color = "#ff4da6";
-   } else {
-     el.innerText = `${card.name} (${card.cost})`;
-   }
+   el.innerHTML = `
+     <b>${card.name}</b><br>
+     <span class="small">${card.desc}</span><br>
+     Cost: ${card.cost}
+   `;
 
    el.onclick = ()=>play(card);
    hand.appendChild(el);
  });
 }
 
-function play(card){
- if(mana < card.cost) return;
-
- mana -= card.cost;
-
- if(card.secret){
-   document.body.innerHTML = `
-     <div style="color:#ff4da6;padding:20px;font-family:monospace;">
-       <h1>💙 SECRET CARD</h1>
-       <p>Artem...</p>
-       <p>ты справился.</p>
-       <p>и это важнее любого деплоя.</p>
-       <p>— твой dev 🐻</p>
-     </div>
-   `;
-   return;
- }
-
- enemyHp -= card.dmg;
- update();
-
- if(enemyHp <= 0){
-   document.body.innerHTML = "<h1>🎉 VICTORY</h1>";
+/* ================= BOSS ================= */
+function checkBoss(){
+ if(enemyHp <= 10 && !bossMode){
+   bossMode = true;
+   bossState.innerText = "🔥 Production Rage Mode ACTIVATED";
  }
 }
 
+/* ================= PLAY ================= */
+function play(card){
+
+ if(mana < card.cost) return;
+ mana -= card.cost;
+
+ checkBoss();
+
+ // 🧠 legacy grows
+ legacy++;
+
+ // 🐛 bug log = shield
+ bugLog += Math.floor(card.dmg / 2);
+
+ let damage = card.dmg;
+
+ // 🔥 Rage Mode nerf (НО НЕ СМЕРТЬ)
+ if(bossMode){
+   damage = Math.max(1, Math.floor(damage * 0.6));
+ }
+
+ enemyHp -= damage;
+
+ update();
+
+ if(enemyHp <= 0){
+   document.body.innerHTML = `
+     <div style="color:#00ff9f;padding:20px;">
+       <h1>🎉 VICTORY</h1>
+       <p>Артём выжил в Production Rage Mode</p>
+       <p>и заставил систему сдаться первой.</p>
+     </div>
+   `;
+ }
+}
+
+/* ================= ENEMY ================= */
 function enemyTurn(){
- playerHp -= 2 + Math.floor(turn/3);
+
+ let dmg = 2 + Math.floor(turn/3);
+
+ if(bossMode){
+   dmg += 3;
+   mana = Math.max(0, mana - 1);
+ }
+
+ // 🛡 bug log shield
+ let blocked = Math.min(bugLog, dmg);
+ dmg -= blocked;
+ bugLog -= blocked;
+
+ // 🧠 legacy corruption
+ if(legacy > 3){
+   dmg += legacy - 3;
+ }
+
+ playerHp -= dmg;
+
  update();
 
  if(playerHp <= 0){
@@ -274,20 +295,51 @@ function enemyTurn(){
  }
 }
 
+/* ================= CI/CD EVENT ================= */
+function ciCdEvent(){
+
+ const events = [
+   "🚨 CI pipeline failed silently",
+   "💥 Deploy rolled back randomly",
+   "⚠️ Hotfix overwritten by main branch"
+ ];
+
+ const event = events[Math.floor(Math.random()*events.length)];
+ bossState.innerText = event;
+
+ if(event.includes("rolled back")){
+   enemyHp += 3;
+ }
+
+ if(event.includes("failed")){
+   mana = Math.max(0, mana - 1);
+ }
+}
+
+/* ================= TURN ================= */
 endTurn.onclick = ()=>{
+
  turn++;
  mana++;
+
+ if(Math.random() < 0.25){
+   ciCdEvent();
+ }
 
  enemyTurn();
  draw();
  update();
 };
 
+/* ================= UPDATE ================= */
 function update(){
  playerHpEl.innerText = playerHp;
  enemyHpEl.innerText = enemyHp;
  manaEl.innerText = mana;
 }
+
+startGame();
+
 </script>
 
 </body>
