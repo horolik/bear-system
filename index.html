@@ -10,16 +10,6 @@ body {
  font-family: monospace;
  background: black;
  color: #00ff9f;
- overflow: hidden;
-}
-
-#matrix {
- position: fixed;
- top: 0;
- left: 0;
- width: 100%;
- height: 100%;
- z-index: 0;
 }
 
 #terminal {
@@ -29,7 +19,6 @@ body {
  color: #00ff9f;
  padding: 20px;
  z-index: 10;
- font-size: 14px;
 }
 
 #terminalText {
@@ -49,8 +38,6 @@ body {
 }
 
 #app {
- position: relative;
- z-index: 2;
  padding: 20px;
 }
 
@@ -74,12 +61,6 @@ body {
  opacity: 0.8;
 }
 
-#lore {
- margin-bottom: 10px;
- border: 1px dashed #00ff9f55;
- padding: 10px;
-}
-
 .hidden {
  display: none;
 }
@@ -88,8 +69,7 @@ body {
 
 <body>
 
-<canvas id="matrix"></canvas>
-
+<!-- TERMINAL -->
 <div id="terminal">
   <div id="terminalText"></div>
 
@@ -98,14 +78,9 @@ body {
   </div>
 </div>
 
+<!-- GAME -->
 <div id="app">
-
 <h1>🐻 Artem vs Production Server</h1>
-
-<div id="lore">
-<b>Артём</b> — инженер, который выживает в продакшене.<br>
-Он не чинит систему — он переживает её сбои.
-</div>
 
 <div id="battle">
   <p>Artem HP: <span id="playerHp">10</span></p>
@@ -124,46 +99,34 @@ body {
 
 <script>
 
-/* ================= MATRIX ================= */
-const canvas = document.getElementById("matrix");
-const ctx = canvas.getContext("2d");
+/* ================= TERMINAL ================= */
+const terminal = document.getElementById("terminal");
+const terminalText = document.getElementById("terminalText");
+const input = document.getElementById("commandInput");
+const inputLine = document.getElementById("inputLine");
 
-function resize(){
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-}
-resize();
-window.addEventListener("resize", resize);
+const lines = [
+ "Booting Artem System...",
+ "Detecting user: Артём",
+ "Connecting to Production Server...",
+ "⚠️ Critical bugs detected",
+ "",
+ "Type 'start' to begin"
+];
 
-const letters = "01";
-const fontSize = 14;
-let columns = Math.floor(canvas.width / fontSize) || 1;
-let drops = Array.from({ length: columns }).fill(1);
+let i = 0;
 
-function matrix(){
-
- columns = Math.floor(canvas.width / fontSize) || 1;
- if(drops.length !== columns){
-   drops = Array.from({ length: columns }).fill(1);
+function type(){
+ if(i < lines.length){
+   terminalText.innerText += lines[i] + "\n";
+   i++;
+   setTimeout(type, 400);
+ } else {
+   inputLine.style.display = "block";
+   input.focus();
  }
-
- ctx.fillStyle = "rgba(0,0,0,0.05)";
- ctx.fillRect(0,0,canvas.width,canvas.height);
-
- ctx.fillStyle = "#00ff9f";
- ctx.font = fontSize + "px monospace";
-
- drops.forEach((y,i)=>{
-   const text = letters[Math.floor(Math.random()*letters.length)];
-   ctx.fillText(text, i*fontSize, y*fontSize);
-
-   if(y*fontSize > canvas.height && Math.random()>0.975){
-     drops[i]=0;
-   }
-   drops[i]++;
- });
 }
-setInterval(matrix, 33);
+type();
 
 /* ================= GAME STATE ================= */
 let playerHp = 10;
@@ -185,33 +148,22 @@ const bossState = document.getElementById("bossState");
 
 /* ================= CARDS ================= */
 const deck = [
- {
-  name:"🐛 Bug Fix",
-  cost:1,
-  dmg:1,
-  desc:"Фикс, который создаёт новый баг"
- },
- {
-  name:"🔥 Hotfix",
-  cost:2,
-  dmg:3,
-  desc:"Быстро и без тестов"
- },
- {
-  name:"💀 Leak",
-  cost:3,
-  dmg:5,
-  desc:"Медленно убивает сервер"
- },
- {
-  name:"🔄 Rollback",
-  cost:2,
-  dmg:2,
-  desc:"Откат + новые баги"
- }
+ { name:"🐛 Bug Fix", cost:1, dmg:1, desc:"Создаёт новый баг" },
+ { name:"🔥 Hotfix", cost:2, dmg:3, desc:"Без тестов" },
+ { name:"💀 Leak", cost:3, dmg:5, desc:"Память утекает" },
+ { name:"🔄 Rollback", cost:2, dmg:2, desc:"Откат + хаос" }
 ];
 
 /* ================= START ================= */
+input.addEventListener("keydown", e=>{
+ if(e.key === "Enter"){
+   if(input.value.trim().toLowerCase() === "start"){
+     terminal.style.display = "none";
+     startGame();
+   }
+ }
+});
+
 function startGame(){
  draw();
  update();
@@ -222,7 +174,6 @@ function draw(){
  hand.innerHTML = "";
 
  deck.forEach(card=>{
-
    const el = document.createElement("div");
    el.className = "card";
 
@@ -259,7 +210,7 @@ function play(card){
  let damage = card.dmg;
 
  if(bossMode){
-   damage = Math.max(1, Math.floor(damage * 0.6));
+   damage = Math.max(1, Math.floor(damage * 0.7));
  }
 
  enemyHp -= damage;
@@ -270,8 +221,7 @@ function play(card){
    document.body.innerHTML = `
      <div style="color:#00ff9f;padding:20px;">
        <h1>🎉 VICTORY</h1>
-       <p>Артём пережил Production Rage Mode</p>
-       <p>и дожал систему до конца.</p>
+       <p>Артём победил Production Server</p>
      </div>
    `;
  }
@@ -283,8 +233,7 @@ function enemyTurn(){
  let dmg = 2 + Math.floor(turn/3);
 
  if(bossMode){
-   dmg += 3;
-   mana = Math.max(0, mana - 1);
+   dmg += 2;
  }
 
  let blocked = Math.min(bugLog, dmg);
@@ -292,7 +241,7 @@ function enemyTurn(){
  bugLog -= blocked;
 
  if(legacy > 3){
-   dmg += legacy - 3;
+   dmg += 1;
  }
 
  playerHp -= dmg;
@@ -304,36 +253,11 @@ function enemyTurn(){
  }
 }
 
-/* ================= CI/CD ================= */
-function ciCdEvent(){
-
- const events = [
-   "🚨 CI pipeline failed silently",
-   "💥 Deploy rolled back randomly",
-   "⚠️ Hotfix overwritten by main branch"
- ];
-
- const event = events[Math.floor(Math.random()*events.length)];
- bossState.innerText = event;
-
- if(event.includes("rolled back")){
-   enemyHp += 3;
- }
-
- if(event.includes("failed")){
-   mana = Math.max(0, mana - 1);
- }
-}
-
 /* ================= TURN ================= */
 endTurn.onclick = ()=>{
 
  turn++;
  mana++;
-
- if(Math.random() < 0.25){
-   ciCdEvent();
- }
 
  enemyTurn();
  draw();
@@ -346,11 +270,6 @@ function update(){
  enemyHpEl.innerText = enemyHp;
  manaEl.innerText = mana;
 }
-
-/* ================= INIT ================= */
-window.addEventListener("DOMContentLoaded", ()=>{
- startGame();
-});
 
 </script>
 
