@@ -16,10 +16,7 @@ body {
 /* MATRIX */
 #matrix {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  inset: 0;
   z-index: 0;
 }
 
@@ -54,6 +51,16 @@ body {
   color: #00ff9f;
   z-index: 20;
   padding: 20px;
+}
+
+/* BUG HUD */
+#bugHud {
+  display: none;
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 9999;
+  color: #00ff9f;
 }
 
 /* GAME */
@@ -95,22 +102,28 @@ body {
 <!-- INTRO -->
 <div id="intro">
   <h2>📘 Инструкция</h2>
+
   <pre>
 🐻 Artem vs Production Server
 
-Цель:
-- уничтожить сервер карточками
-- но сначала нужно собрать debug энергию
+🎯 ЦЕЛЬ:
+Победить production server.
 
-Как играть:
-- лови 🐛 баги кликом
-- набери 5 debug points
-- потом откроется бой
+⚙️ ЭТАПЫ:
+1. Лови 🐛 баги (debug mode)
+2. Собери 5 debug points
+3. Открой карточный бой
 
-Удачи, dev.
+🧠 ВАЖНО:
+Без debug points бой не запускается.
   </pre>
 
   <button id="startCatch">START DEBUG MODE</button>
+</div>
+
+<!-- BUG HUD -->
+<div id="bugHud">
+  Debug points: <span id="dp">0</span>/5
 </div>
 
 <!-- GAME -->
@@ -161,7 +174,6 @@ function matrix(){
     drops[i]++;
   });
 }
-
 setInterval(matrix, 33);
 
 /* STATE */
@@ -201,6 +213,7 @@ type();
 input.addEventListener("keydown", e=>{
   if(e.key === "Enter"){
     const cmd = input.value.trim().toLowerCase();
+
     terminalText.innerText += "> " + cmd + "\n";
 
     if(cmd === "start"){
@@ -219,7 +232,7 @@ input.addEventListener("keydown", e=>{
   }
 });
 
-/* INTRO */
+/* INTRO → BUG MODE */
 document.getElementById("startCatch").onclick = ()=>{
   document.getElementById("intro").style.display = "none";
   startBugGame();
@@ -227,13 +240,21 @@ document.getElementById("startCatch").onclick = ()=>{
 
 /* BUG GAME */
 function startBugGame(){
-  gameState = "catch";
+  gameState = "bugs";
+
+  document.getElementById("bugHud").style.display = "block";
+
   spawnBug();
-  checkStartBattle();
+  checkBugWin();
+}
+
+function addDebugPoint(){
+  debugPoints++;
+  document.getElementById("dp").innerText = debugPoints;
 }
 
 function spawnBug(){
-  if(gameState !== "catch") return;
+  if(gameState !== "bugs") return;
 
   const bug = document.createElement("div");
   bug.innerText = "🐛";
@@ -245,24 +266,30 @@ function spawnBug(){
   bug.style.zIndex = 999;
 
   bug.onclick = ()=>{
-    debugPoints++;
+    addDebugPoint();
     bug.remove();
   };
 
   document.body.appendChild(bug);
 
-  setTimeout(()=>bug.remove(), 1500);
-  setTimeout(spawnBug, 350);
+  setTimeout(()=>bug.remove(), 1400);
+  setTimeout(spawnBug, 300);
 }
 
-function checkStartBattle(){
+function checkBugWin(){
+  if(gameState !== "bugs") return;
+
   if(debugPoints >= 5){
     gameState = "battle";
+
+    document.getElementById("bugHud").style.display = "none";
     document.getElementById("app").style.display = "block";
+
     startGame();
-  } else {
-    setTimeout(checkStartBattle, 500);
+    return;
   }
+
+  setTimeout(checkBugWin, 300);
 }
 
 /* BOSS */
