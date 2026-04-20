@@ -31,7 +31,6 @@ body {
   color: #00ff9f;
   padding: 20px;
   z-index: 10;
-  font-size: 14px;
 }
 
 #terminalText { white-space: pre-line; }
@@ -46,8 +45,20 @@ body {
   font-family: monospace;
 }
 
+/* INTRO */
+#intro {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: black;
+  color: #00ff9f;
+  z-index: 20;
+  padding: 20px;
+}
+
 /* GAME */
 #app {
+  display: none;
   position: relative;
   z-index: 2;
   padding: 20px;
@@ -66,7 +77,6 @@ body {
   border: 1px solid #00ff9f55;
   cursor: pointer;
 }
-
 </style>
 </head>
 
@@ -74,6 +84,7 @@ body {
 
 <canvas id="matrix"></canvas>
 
+<!-- TERMINAL -->
 <div id="terminal">
   <div id="terminalText"></div>
   <div id="inputLine" style="display:none;">
@@ -81,13 +92,36 @@ body {
   </div>
 </div>
 
+<!-- INTRO -->
+<div id="intro">
+  <h2>📘 Инструкция</h2>
+  <pre>
+🐻 Artem vs Production Server
+
+Цель:
+- уничтожить сервер карточками
+- но сначала нужно собрать debug энергию
+
+Как играть:
+- лови 🐛 баги кликом
+- набери 5 debug points
+- потом откроется бой
+
+Удачи, dev.
+  </pre>
+
+  <button id="startCatch">START DEBUG MODE</button>
+</div>
+
+<!-- GAME -->
 <div id="app">
   <h1>🐻 Artem vs Production Server</h1>
 
   <div id="battle">
     <p>Artem HP: <span id="playerHp">20</span></p>
-    <p>Server HP: <span id="enemyHp">25</span></p>
+    <p>Boss HP: <span id="enemyHp">40</span></p>
     <p>Mana: <span id="mana">1</span></p>
+    <p>Shield: <span id="shield">0</span></p>
 
     <hr>
 
@@ -97,6 +131,7 @@ body {
 </div>
 
 <script>
+
 /* MATRIX */
 const canvas = document.getElementById("matrix");
 const ctx = canvas.getContext("2d");
@@ -109,7 +144,7 @@ const fontSize = 14;
 const columns = canvas.width / fontSize;
 const drops = Array.from({ length: columns }).fill(1);
 
-function matrix() {
+function matrix(){
   ctx.fillStyle = "rgba(0,0,0,0.05)";
   ctx.fillRect(0,0,canvas.width,canvas.height);
 
@@ -128,6 +163,10 @@ function matrix() {
 }
 
 setInterval(matrix, 33);
+
+/* STATE */
+let gameState = "terminal";
+let debugPoints = 0;
 
 /* TERMINAL */
 const terminal = document.getElementById("terminal");
@@ -162,14 +201,15 @@ type();
 input.addEventListener("keydown", e=>{
   if(e.key === "Enter"){
     const cmd = input.value.trim().toLowerCase();
-
     terminalText.innerText += "> " + cmd + "\n";
 
     if(cmd === "start"){
       terminalText.innerText += "Launching...\n";
+
       setTimeout(()=>{
         terminal.style.display = "none";
-        startGame();
+        document.getElementById("intro").style.display = "block";
+        gameState = "intro";
       }, 600);
     } else {
       terminalText.innerText += "command not found\n";
@@ -179,18 +219,74 @@ input.addEventListener("keydown", e=>{
   }
 });
 
-/* GAME */
+/* INTRO */
+document.getElementById("startCatch").onclick = ()=>{
+  document.getElementById("intro").style.display = "none";
+  startBugGame();
+};
+
+/* BUG GAME */
+function startBugGame(){
+  gameState = "catch";
+  spawnBug();
+  checkStartBattle();
+}
+
+function spawnBug(){
+  if(gameState !== "catch") return;
+
+  const bug = document.createElement("div");
+  bug.innerText = "🐛";
+  bug.style.position = "absolute";
+  bug.style.left = Math.random()*window.innerWidth + "px";
+  bug.style.top = Math.random()*window.innerHeight + "px";
+  bug.style.fontSize = "24px";
+  bug.style.cursor = "pointer";
+  bug.style.zIndex = 999;
+
+  bug.onclick = ()=>{
+    debugPoints++;
+    bug.remove();
+  };
+
+  document.body.appendChild(bug);
+
+  setTimeout(()=>bug.remove(), 1500);
+  setTimeout(spawnBug, 350);
+}
+
+function checkStartBattle(){
+  if(debugPoints >= 5){
+    gameState = "battle";
+    document.getElementById("app").style.display = "block";
+    startGame();
+  } else {
+    setTimeout(checkStartBattle, 500);
+  }
+}
+
+/* BOSS */
 let playerHp = 20;
-let enemyHp = 25;
+
+let enemy = {
+  hp: 40,
+  maxHp: 40,
+  shield: 0,
+  phase: 1
+};
+
 let mana = 1;
 let turn = 1;
 
+/* UI */
 const playerHpEl = document.getElementById("playerHp");
 const enemyHpEl = document.getElementById("enemyHp");
 const manaEl = document.getElementById("mana");
+const shieldEl = document.getElementById("shield");
 const hand = document.getElementById("hand");
 const endTurn = document.getElementById("endTurn");
 
+/* DECK */
 const deck = [
   { name:"🐛 Bug Fix", cost:1, dmg:2 },
   { name:"🔥 Hotfix", cost:2, dmg:4 },
@@ -210,11 +306,8 @@ function draw(){
   deck.forEach(card=>{
     const el = document.createElement("div");
     el.className = "card";
-
     el.innerText = `${card.name} (${card.cost})`;
-
     el.onclick = ()=>play(card);
-
     hand.appendChild(el);
   });
 }
@@ -223,17 +316,34 @@ function play(card){
   if(mana < card.cost) return;
 
   mana -= card.cost;
-  enemyHp -= card.dmg;
+
+  let dmg = card.dmg;
+
+  if(enemy.shield > 0){
+    const blocked = Math.min(enemy.shield, dmg);
+    enemy.shield -= blocked;
+    dmg -= blocked;
+  }
+
+  enemy.hp -= dmg;
 
   update();
 
-  if(enemyHp <= 0){
-    document.body.innerHTML = "<h1 style='color:#00ff9f'>🎉 VICTORY</h1>";
+  if(enemy.hp <= 0){
+    document.body.innerHTML = "<h1 style='color:#00ff9f'>🎉 BOSS DEFEATED</h1>";
   }
 }
 
 function enemyTurn(){
-  const dmg = 2 + Math.floor(turn/4);
+
+  if(enemy.hp <= enemy.maxHp/2 && enemy.phase === 1){
+    enemy.phase = 2;
+    enemy.shield = 5;
+  }
+
+  let dmg = enemy.phase === 1
+    ? 2 + Math.floor(turn/3)
+    : 5 + Math.floor(turn/2);
 
   playerHp -= dmg;
 
@@ -246,7 +356,7 @@ function enemyTurn(){
 
 endTurn.onclick = ()=>{
   turn++;
-  mana += 2; // быстрее игра = меньше фрустрации
+  mana += 2;
   enemyTurn();
   draw();
   update();
@@ -254,9 +364,11 @@ endTurn.onclick = ()=>{
 
 function update(){
   playerHpEl.innerText = playerHp;
-  enemyHpEl.innerText = enemyHp;
+  enemyHpEl.innerText = enemy.hp;
   manaEl.innerText = mana;
+  shieldEl.innerText = enemy.shield;
 }
+
 </script>
 
 </body>
