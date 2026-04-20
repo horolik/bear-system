@@ -79,6 +79,10 @@ body {
  border: 1px dashed #00ff9f55;
  padding: 10px;
 }
+
+.hidden {
+ display: none;
+}
 </style>
 </head>
 
@@ -99,8 +103,8 @@ body {
 <h1>🐻 Artem vs Production Server</h1>
 
 <div id="lore">
-<b>Артём</b> — инженер, который выживает в продакшене, где всё ломается само.<br>
-Он не чинит систему. Он её переживает.
+<b>Артём</b> — инженер, который выживает в продакшене.<br>
+Он не чинит систему — он переживает её сбои.
 </div>
 
 <div id="battle">
@@ -124,15 +128,25 @@ body {
 const canvas = document.getElementById("matrix");
 const ctx = canvas.getContext("2d");
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+function resize(){
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener("resize", resize);
 
 const letters = "01";
 const fontSize = 14;
-const columns = canvas.width / fontSize;
-const drops = Array.from({ length: columns }).fill(1);
+let columns = Math.floor(canvas.width / fontSize) || 1;
+let drops = Array.from({ length: columns }).fill(1);
 
 function matrix(){
+
+ columns = Math.floor(canvas.width / fontSize) || 1;
+ if(drops.length !== columns){
+   drops = Array.from({ length: columns }).fill(1);
+ }
+
  ctx.fillStyle = "rgba(0,0,0,0.05)";
  ctx.fillRect(0,0,canvas.width,canvas.height);
 
@@ -161,6 +175,7 @@ let bossMode = false;
 let bugLog = 0;
 let legacy = 0;
 
+/* ================= UI ================= */
 const playerHpEl = document.getElementById("playerHp");
 const enemyHpEl = document.getElementById("enemyHp");
 const manaEl = document.getElementById("mana");
@@ -174,25 +189,25 @@ const deck = [
   name:"🐛 Bug Fix",
   cost:1,
   dmg:1,
-  desc:"Локальный фикс, который создаёт новый баг"
+  desc:"Фикс, который создаёт новый баг"
  },
  {
   name:"🔥 Hotfix",
   cost:2,
   dmg:3,
-  desc:"Быстрое исправление без тестов"
+  desc:"Быстро и без тестов"
  },
  {
   name:"💀 Leak",
   cost:3,
   dmg:5,
-  desc:"Память утекает как зарплата после деплоя"
+  desc:"Медленно убивает сервер"
  },
  {
   name:"🔄 Rollback",
   cost:2,
   dmg:2,
-  desc:"Откат + новые неожиданные баги"
+  desc:"Откат + новые баги"
  }
 ];
 
@@ -236,17 +251,13 @@ function play(card){
  if(mana < card.cost) return;
  mana -= card.cost;
 
- checkBoss();
-
- // 🧠 legacy grows
  legacy++;
-
- // 🐛 bug log = shield
  bugLog += Math.floor(card.dmg / 2);
+
+ checkBoss();
 
  let damage = card.dmg;
 
- // 🔥 Rage Mode nerf (НО НЕ СМЕРТЬ)
  if(bossMode){
    damage = Math.max(1, Math.floor(damage * 0.6));
  }
@@ -259,8 +270,8 @@ function play(card){
    document.body.innerHTML = `
      <div style="color:#00ff9f;padding:20px;">
        <h1>🎉 VICTORY</h1>
-       <p>Артём выжил в Production Rage Mode</p>
-       <p>и заставил систему сдаться первой.</p>
+       <p>Артём пережил Production Rage Mode</p>
+       <p>и дожал систему до конца.</p>
      </div>
    `;
  }
@@ -276,12 +287,10 @@ function enemyTurn(){
    mana = Math.max(0, mana - 1);
  }
 
- // 🛡 bug log shield
  let blocked = Math.min(bugLog, dmg);
  dmg -= blocked;
  bugLog -= blocked;
 
- // 🧠 legacy corruption
  if(legacy > 3){
    dmg += legacy - 3;
  }
@@ -295,7 +304,7 @@ function enemyTurn(){
  }
 }
 
-/* ================= CI/CD EVENT ================= */
+/* ================= CI/CD ================= */
 function ciCdEvent(){
 
  const events = [
@@ -338,7 +347,10 @@ function update(){
  manaEl.innerText = mana;
 }
 
-startGame();
+/* ================= INIT ================= */
+window.addEventListener("DOMContentLoaded", ()=>{
+ startGame();
+});
 
 </script>
 
