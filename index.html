@@ -110,12 +110,11 @@ body {
 Победить production server.
 
 ⚙️ ЭТАПЫ:
-1. Лови 🐛 баги (debug mode)
+1. Лови 🐛 баги
 2. Собери 5 debug points
-3. Открой карточный бой
+3. Открой бой
 
-🧠 ВАЖНО:
-Без debug points бой не запускается.
+🧠 Без багов бой недоступен
   </pre>
 
   <button id="startCatch">START DEBUG MODE</button>
@@ -144,6 +143,10 @@ body {
 </div>
 
 <script>
+
+/* STATE */
+let gameState = "terminal";
+let debugPoints = 0;
 
 /* MATRIX */
 const canvas = document.getElementById("matrix");
@@ -175,10 +178,6 @@ function matrix(){
   });
 }
 setInterval(matrix, 33);
-
-/* STATE */
-let gameState = "terminal";
-let debugPoints = 0;
 
 /* TERMINAL */
 const terminal = document.getElementById("terminal");
@@ -232,7 +231,7 @@ input.addEventListener("keydown", e=>{
   }
 });
 
-/* INTRO → BUG MODE */
+/* INTRO */
 document.getElementById("startCatch").onclick = ()=>{
   document.getElementById("intro").style.display = "none";
   startBugGame();
@@ -322,12 +321,17 @@ const deck = [
   { name:"💙 Dev Blessing", cost:4, dmg:10 }
 ];
 
+/* SAFE START */
 function startGame(){
+  if(gameState !== "battle") return;
   draw();
   update();
 }
 
+/* BLOCKED DRAW */
 function draw(){
+  if(gameState !== "battle") return;
+
   hand.innerHTML = "";
 
   deck.forEach(card=>{
@@ -339,7 +343,9 @@ function draw(){
   });
 }
 
+/* BLOCKED PLAY */
 function play(card){
+  if(gameState !== "battle") return;
   if(mana < card.cost) return;
 
   mana -= card.cost;
@@ -361,7 +367,9 @@ function play(card){
   }
 }
 
+/* ENEMY */
 function enemyTurn(){
+  if(gameState !== "battle") return;
 
   if(enemy.hp <= enemy.maxHp/2 && enemy.phase === 1){
     enemy.phase = 2;
@@ -381,7 +389,10 @@ function enemyTurn(){
   }
 }
 
+/* TURN */
 endTurn.onclick = ()=>{
+  if(gameState !== "battle") return;
+
   turn++;
   mana += 2;
   enemyTurn();
@@ -389,6 +400,7 @@ endTurn.onclick = ()=>{
   update();
 };
 
+/* UPDATE */
 function update(){
   playerHpEl.innerText = playerHp;
   enemyHpEl.innerText = enemy.hp;
