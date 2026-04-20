@@ -6,271 +6,257 @@
 
 <style>
 body {
- margin: 0;
- font-family: monospace;
- background: black;
- color: #00ff9f;
+  margin: 0;
+  font-family: monospace;
+  background: black;
+  color: #00ff9f;
+  overflow: hidden;
 }
 
+/* MATRIX */
+#matrix {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+/* TERMINAL */
 #terminal {
- position: fixed;
- inset: 0;
- background: black;
- color: #00ff9f;
- padding: 20px;
- z-index: 10;
+  position: fixed;
+  inset: 0;
+  background: black;
+  color: #00ff9f;
+  padding: 20px;
+  z-index: 10;
+  font-size: 14px;
 }
 
-#terminalText {
- white-space: pre-line;
-}
+#terminalText { white-space: pre-line; }
 
-#inputLine {
- margin-top: 10px;
-}
+#inputLine { margin-top: 10px; }
 
 #commandInput {
- background: black;
- border: none;
- color: #00ff9f;
- outline: none;
- font-family: monospace;
+  background: black;
+  border: none;
+  color: #00ff9f;
+  outline: none;
+  font-family: monospace;
 }
 
+/* GAME */
 #app {
- padding: 20px;
+  position: relative;
+  z-index: 2;
+  padding: 20px;
 }
 
 #battle {
- margin-top: 20px;
- border: 1px solid #00ff9f55;
- padding: 10px;
+  margin-top: 20px;
+  border: 1px solid #00ff9f55;
+  padding: 10px;
 }
 
 .card {
- display: inline-block;
- margin: 5px;
- padding: 8px;
- border: 1px solid #00ff9f55;
- cursor: pointer;
- width: 180px;
+  display: inline-block;
+  margin: 5px;
+  padding: 8px;
+  border: 1px solid #00ff9f55;
+  cursor: pointer;
 }
 
-.small {
- font-size: 12px;
- opacity: 0.8;
-}
-
-.hidden {
- display: none;
-}
 </style>
 </head>
 
 <body>
 
-<!-- TERMINAL -->
+<canvas id="matrix"></canvas>
+
 <div id="terminal">
   <div id="terminalText"></div>
-
   <div id="inputLine" style="display:none;">
     > <input id="commandInput" autocomplete="off" />
   </div>
 </div>
 
-<!-- GAME -->
 <div id="app">
-<h1>🐻 Artem vs Production Server</h1>
+  <h1>🐻 Artem vs Production Server</h1>
 
-<div id="battle">
-  <p>Artem HP: <span id="playerHp">10</span></p>
-  <p>Server HP: <span id="enemyHp">20</span></p>
-  <p>Mana: <span id="mana">0</span></p>
-  <p id="bossState" style="color:#ff4d4d;"></p>
+  <div id="battle">
+    <p>Artem HP: <span id="playerHp">20</span></p>
+    <p>Server HP: <span id="enemyHp">25</span></p>
+    <p>Mana: <span id="mana">1</span></p>
 
-  <hr>
+    <hr>
 
-  <div id="hand"></div>
-
-  <button id="endTurn">End Turn</button>
-</div>
-
+    <div id="hand"></div>
+    <button id="endTurn">End Turn</button>
+  </div>
 </div>
 
 <script>
+/* MATRIX */
+const canvas = document.getElementById("matrix");
+const ctx = canvas.getContext("2d");
 
-/* ================= TERMINAL ================= */
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+const letters = "01";
+const fontSize = 14;
+const columns = canvas.width / fontSize;
+const drops = Array.from({ length: columns }).fill(1);
+
+function matrix() {
+  ctx.fillStyle = "rgba(0,0,0,0.05)";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  ctx.fillStyle = "#00ff9f";
+  ctx.font = fontSize + "px monospace";
+
+  drops.forEach((y,i)=>{
+    const text = letters[Math.floor(Math.random()*letters.length)];
+    ctx.fillText(text, i*fontSize, y*fontSize);
+
+    if(y*fontSize > canvas.height && Math.random()>0.975){
+      drops[i]=0;
+    }
+    drops[i]++;
+  });
+}
+
+setInterval(matrix, 33);
+
+/* TERMINAL */
 const terminal = document.getElementById("terminal");
 const terminalText = document.getElementById("terminalText");
 const input = document.getElementById("commandInput");
 const inputLine = document.getElementById("inputLine");
 
 const lines = [
- "Booting Artem System...",
- "Detecting user: Артём",
- "Connecting to Production Server...",
- "⚠️ Critical bugs detected",
- "",
- "Type 'start' to begin"
+  "Booting Artem System...",
+  "Loading modules...",
+  "Detecting user: Артём",
+  "Connecting to Production Server...",
+  "⚠️ Critical bugs detected",
+  "",
+  "Type 'start' to begin"
 ];
 
 let i = 0;
 
 function type(){
- if(i < lines.length){
-   terminalText.innerText += lines[i] + "\n";
-   i++;
-   setTimeout(type, 400);
- } else {
-   inputLine.style.display = "block";
-   input.focus();
- }
+  if(i < lines.length){
+    terminalText.innerText += lines[i] + "\n";
+    i++;
+    setTimeout(type, 400);
+  } else {
+    inputLine.style.display = "block";
+    input.focus();
+  }
 }
 type();
 
-/* ================= GAME STATE ================= */
-let playerHp = 10;
-let enemyHp = 20;
-let mana = 0;
+input.addEventListener("keydown", e=>{
+  if(e.key === "Enter"){
+    const cmd = input.value.trim().toLowerCase();
+
+    terminalText.innerText += "> " + cmd + "\n";
+
+    if(cmd === "start"){
+      terminalText.innerText += "Launching...\n";
+      setTimeout(()=>{
+        terminal.style.display = "none";
+        startGame();
+      }, 600);
+    } else {
+      terminalText.innerText += "command not found\n";
+    }
+
+    input.value = "";
+  }
+});
+
+/* GAME */
+let playerHp = 20;
+let enemyHp = 25;
+let mana = 1;
 let turn = 1;
 
-let bossMode = false;
-let bugLog = 0;
-let legacy = 0;
-
-/* ================= UI ================= */
 const playerHpEl = document.getElementById("playerHp");
 const enemyHpEl = document.getElementById("enemyHp");
 const manaEl = document.getElementById("mana");
 const hand = document.getElementById("hand");
 const endTurn = document.getElementById("endTurn");
-const bossState = document.getElementById("bossState");
 
-/* ================= CARDS ================= */
 const deck = [
- { name:"🐛 Bug Fix", cost:1, dmg:1, desc:"Создаёт новый баг" },
- { name:"🔥 Hotfix", cost:2, dmg:3, desc:"Без тестов" },
- { name:"💀 Leak", cost:3, dmg:5, desc:"Память утекает" },
- { name:"🔄 Rollback", cost:2, dmg:2, desc:"Откат + хаос" }
+  { name:"🐛 Bug Fix", cost:1, dmg:2 },
+  { name:"🔥 Hotfix", cost:2, dmg:4 },
+  { name:"💀 Leak", cost:3, dmg:6 },
+  { name:"🔄 Rollback", cost:2, dmg:3 },
+  { name:"💙 Dev Blessing", cost:4, dmg:10 }
 ];
 
-/* ================= START ================= */
-input.addEventListener("keydown", e=>{
- if(e.key === "Enter"){
-   if(input.value.trim().toLowerCase() === "start"){
-     terminal.style.display = "none";
-     startGame();
-   }
- }
-});
-
 function startGame(){
- draw();
- update();
+  draw();
+  update();
 }
 
-/* ================= DRAW ================= */
 function draw(){
- hand.innerHTML = "";
+  hand.innerHTML = "";
 
- deck.forEach(card=>{
-   const el = document.createElement("div");
-   el.className = "card";
+  deck.forEach(card=>{
+    const el = document.createElement("div");
+    el.className = "card";
 
-   el.innerHTML = `
-     <b>${card.name}</b><br>
-     <span class="small">${card.desc}</span><br>
-     Cost: ${card.cost}
-   `;
+    el.innerText = `${card.name} (${card.cost})`;
 
-   el.onclick = ()=>play(card);
-   hand.appendChild(el);
- });
+    el.onclick = ()=>play(card);
+
+    hand.appendChild(el);
+  });
 }
 
-/* ================= BOSS ================= */
-function checkBoss(){
- if(enemyHp <= 10 && !bossMode){
-   bossMode = true;
-   bossState.innerText = "🔥 Production Rage Mode ACTIVATED";
- }
-}
-
-/* ================= PLAY ================= */
 function play(card){
+  if(mana < card.cost) return;
 
- if(mana < card.cost) return;
- mana -= card.cost;
+  mana -= card.cost;
+  enemyHp -= card.dmg;
 
- legacy++;
- bugLog += Math.floor(card.dmg / 2);
+  update();
 
- checkBoss();
-
- let damage = card.dmg;
-
- if(bossMode){
-   damage = Math.max(1, Math.floor(damage * 0.7));
- }
-
- enemyHp -= damage;
-
- update();
-
- if(enemyHp <= 0){
-   document.body.innerHTML = `
-     <div style="color:#00ff9f;padding:20px;">
-       <h1>🎉 VICTORY</h1>
-       <p>Артём победил Production Server</p>
-     </div>
-   `;
- }
+  if(enemyHp <= 0){
+    document.body.innerHTML = "<h1 style='color:#00ff9f'>🎉 VICTORY</h1>";
+  }
 }
 
-/* ================= ENEMY ================= */
 function enemyTurn(){
+  const dmg = 2 + Math.floor(turn/4);
 
- let dmg = 2 + Math.floor(turn/3);
+  playerHp -= dmg;
 
- if(bossMode){
-   dmg += 2;
- }
+  update();
 
- let blocked = Math.min(bugLog, dmg);
- dmg -= blocked;
- bugLog -= blocked;
-
- if(legacy > 3){
-   dmg += 1;
- }
-
- playerHp -= dmg;
-
- update();
-
- if(playerHp <= 0){
-   document.body.innerHTML = "<h1>💀 GAME OVER</h1>";
- }
+  if(playerHp <= 0){
+    document.body.innerHTML = "<h1 style='color:red'>💀 GAME OVER</h1>";
+  }
 }
 
-/* ================= TURN ================= */
 endTurn.onclick = ()=>{
-
- turn++;
- mana++;
-
- enemyTurn();
- draw();
- update();
+  turn++;
+  mana += 2; // быстрее игра = меньше фрустрации
+  enemyTurn();
+  draw();
+  update();
 };
 
-/* ================= UPDATE ================= */
 function update(){
- playerHpEl.innerText = playerHp;
- enemyHpEl.innerText = enemyHp;
- manaEl.innerText = mana;
+  playerHpEl.innerText = playerHp;
+  enemyHpEl.innerText = enemyHp;
+  manaEl.innerText = mana;
 }
-
 </script>
 
 </body>
