@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Bear System 🐻</title>
+<title>Artem vs Production Server 🐻</title>
 
 <style>
 body {
@@ -11,6 +11,16 @@ body {
  background: black;
  color: #00ff9f;
  overflow: hidden;
+}
+
+/* MATRIX */
+#matrix {
+ position: fixed;
+ top: 0;
+ left: 0;
+ width: 100%;
+ height: 100%;
+ z-index: 0;
 }
 
 /* TERMINAL */
@@ -23,7 +33,7 @@ body {
  background: black;
  color: #00ff9f;
  padding: 20px;
- z-index: 2;
+ z-index: 5;
  font-size: 14px;
 }
 
@@ -39,49 +49,30 @@ body {
  font-family: monospace;
 }
 
-/* APP */
+/* GAME */
 #app {
+ position: relative;
+ z-index: 2;
  padding: 20px;
- position: relative;
- z-index: 1;
 }
 
-h1 {
- text-shadow: 0 0 10px #00ff9f;
-}
-
-button {
- padding: 10px;
- background: black;
- border: 1px solid #00ff9f;
- color: #00ff9f;
- cursor: pointer;
-}
-
-#game {
+#battle {
  margin-top: 20px;
- height: 300px;
- border: 1px dashed #00ff9f55;
- position: relative;
- overflow: hidden;
+ border: 1px solid #00ff9f55;
+ padding: 10px;
 }
 
-.item {
- position: absolute;
- background: black;
- padding: 5px 8px;
+.card {
+ display: inline-block;
+ margin: 5px;
+ padding: 8px;
  border: 1px solid #00ff9f55;
  cursor: pointer;
 }
 
-/* MATRIX */
-#matrix {
- position: fixed;
- top: 0;
- left: 0;
- width: 100%;
- height: 100%;
- z-index: 0;
+.legendary {
+ border: 1px solid gold;
+ color: gold;
 }
 </style>
 </head>
@@ -94,161 +85,33 @@ button {
 <div id="terminal">
   <div id="terminalText"></div>
   <div id="inputLine" style="display:none;">
-    <span>> </span>
-    <input id="commandInput" autofocus />
+    > <input id="commandInput" autofocus />
   </div>
 </div>
 
 <!-- GAME -->
 <div id="app">
-<h1>🐻 Bear Debug System</h1>
-<button id="startBtn">START FIX MODE</button>
-<p>Score: <span id="score">0</span> | HP: <span id="hp">3</span></p>
-<div id="log" style="color:#22c55e;margin:10px 0;"></div>
-<div id="game"></div>
+
+<h1>🐻 Artem vs Production Server</h1>
+
+<div id="battle">
+  <p>Artem HP: <span id="playerHp">10</span></p>
+  <p>Server HP: <span id="enemyHp">20</span></p>
+  <p>Mana: <span id="mana">0</span></p>
+
+  <hr>
+
+  <div id="hand"></div>
+
+  <button id="endTurn">End Turn</button>
+</div>
+
 </div>
 
 <script>
-const devName = "Артём";
-
-let score = 0;
-let hp = 3;
-let started = false;
-let interval;
-
-const game = document.getElementById("game");
-const scoreEl = document.getElementById("score");
-const hpEl = document.getElementById("hp");
-const log = document.getElementById("log");
-
-const sound = new Audio("https://actions.google.com/sounds/v1/cartoon/pop.ogg");
-
-/* TERMINAL LOGIC */
-const terminal = document.getElementById("terminal");
-const terminalText = document.getElementById("terminalText");
-const inputLine = document.getElementById("inputLine");
-const input = document.getElementById("commandInput");
-
-const lines = [
-  "Booting Bear System...",
-  "Loading modules...",
-  "Initializing developer profile...",
-  "User detected: Артём",
-  "Scanning for bugs...",
-  "⚠️ Critical bugs detected",
-  "",
-  "Type 'start' to begin"
-];
-
-let i = 0;
-
-function typeLine() {
- if (i < lines.length) {
-   terminalText.innerText += lines[i] + "\n";
-   i++;
-   setTimeout(typeLine, 600);
- } else {
-   inputLine.style.display = "block";
-   input.focus();
- }
-}
-
-typeLine();
-
-input.addEventListener("keydown", function(e) {
- if (e.key === "Enter") {
-   const cmd = input.value.trim().toLowerCase();
-
-   terminalText.innerText += "> " + cmd + "\n";
-
-   if (cmd === "start") {
-     terminal.innerText += "\nLaunching debug mode...\n";
-
-     setTimeout(() => {
-       terminal.style.display = "none";
-       document.getElementById("startBtn").click();
-     }, 900);
-   } else {
-     terminalText.innerText += "command not found\n";
-   }
-
-   input.value = "";
- }
-});
-
-/* GAME */
-document.getElementById("startBtn").onclick = function () {
- if (started) return;
- started = true;
-
- log.innerText = `👨‍💻 ${devName}, fix the bugs`;
-
- spawn();
- interval = setInterval(spawn, 800);
-};
-
-function update() {
- scoreEl.innerText = score;
- hpEl.innerText = hp;
-}
-
-function win() {
- clearInterval(interval);
- game.innerHTML = `
-   <h2>✔ BUILD SUCCESS</h2>
-   <p>${devName}, ты пофиксил все баги.</p>
-   <p>🎁 Теперь открой подарок:</p>
-   <a href="https://your-link-here.com" target="_blank" style="color:#00ff9f;">
-     открыть
-   </a>
- `;
-}
-
-function spawn() {
- const item = document.createElement("div");
- item.className = "item";
- const r = Math.random();
-
- if (r < 0.1) {
-   item.innerText = "🔥 CRITICAL BUG";
-   item.onclick = () => {
-     sound.play();
-     score += 5;
-     item.remove();
-     update();
-     if (score >= 20) win();
-   };
- } else if (r < 0.7) {
-   item.innerText = "🐻 BEAR BUG";
-   item.onclick = () => {
-     sound.play();
-     score++;
-     item.remove();
-     update();
-     if (score >= 20) win();
-   };
- } else {
-   item.innerText = "⏰ deadline";
-   item.onclick = () => {
-     sound.play();
-     hp--;
-     item.remove();
-     update();
-     if (hp <= 0) {
-       alert("💀 game over");
-       location.reload();
-     }
-   };
- }
-
- item.style.left = Math.random() * 80 + "%";
- item.style.top = Math.random() * 80 + "%";
-
- game.appendChild(item);
- setTimeout(() => item.remove(), 2500);
-}
-
-/* MATRIX */
+/* ======================
+   MATRIX
+====================== */
 const canvas = document.getElementById("matrix");
 const ctx = canvas.getContext("2d");
 
@@ -258,29 +121,195 @@ canvas.height = window.innerHeight;
 const letters = "01";
 const fontSize = 14;
 const columns = canvas.width / fontSize;
-
 const drops = Array.from({ length: columns }).fill(1);
 
 function drawMatrix() {
- ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
- ctx.fillRect(0, 0, canvas.width, canvas.height);
+ ctx.fillStyle = "rgba(0,0,0,0.05)";
+ ctx.fillRect(0,0,canvas.width,canvas.height);
 
  ctx.fillStyle = "#00ff9f";
  ctx.font = fontSize + "px monospace";
 
- drops.forEach((y, i) => {
-   const text = letters[Math.floor(Math.random() * letters.length)];
-   ctx.fillText(text, i * fontSize, y * fontSize);
+ drops.forEach((y,i)=>{
+   const text = letters[Math.floor(Math.random()*letters.length)];
+   ctx.fillText(text, i*fontSize, y*fontSize);
 
-   if (y * fontSize > canvas.height && Math.random() > 0.975) {
-     drops[i] = 0;
+   if(y*fontSize > canvas.height && Math.random() > 0.975){
+     drops[i]=0;
    }
-
    drops[i]++;
  });
 }
 
 setInterval(drawMatrix, 33);
+
+/* ======================
+   TERMINAL
+====================== */
+const terminal = document.getElementById("terminal");
+const terminalText = document.getElementById("terminalText");
+const input = document.getElementById("commandInput");
+const inputLine = document.getElementById("inputLine");
+
+const lines = [
+ "Booting Artem System...",
+ "Loading dev modules...",
+ "Detecting user: Артём",
+ "Connecting to Production Server...",
+ "⚠️ Critical bugs detected",
+ "",
+ "Type 'start' to continue"
+];
+
+let i = 0;
+
+function typeLines(){
+ if(i < lines.length){
+   terminalText.innerText += lines[i] + "\n";
+   i++;
+   setTimeout(typeLines, 500);
+ } else {
+   inputLine.style.display = "block";
+ }
+}
+
+typeLines();
+
+input.addEventListener("keydown", e=>{
+ if(e.key === "Enter"){
+   const cmd = input.value.trim().toLowerCase();
+
+   terminalText.innerText += "> " + cmd + "\n";
+
+   if(cmd === "start"){
+     terminalText.innerText += "Launching battle...\n";
+     setTimeout(()=>{
+       terminal.style.display = "none";
+       startGame();
+     }, 800);
+   } else {
+     terminalText.innerText += "command not found\n";
+   }
+
+   input.value = "";
+ }
+});
+
+/* ======================
+   GAME
+====================== */
+let playerHp = 10;
+let enemyHp = 20;
+let mana = 0;
+let turn = 1;
+
+const playerHpEl = document.getElementById("playerHp");
+const enemyHpEl = document.getElementById("enemyHp");
+const manaEl = document.getElementById("mana");
+const hand = document.getElementById("hand");
+const endTurnBtn = document.getElementById("endTurn");
+
+const deck = [
+ { name: "🐛 Null Bug Fix", cost: 1, dmg: 1 },
+ { name: "🔥 Hotfix Deploy", cost: 2, dmg: 3 },
+ { name: "💀 Memory Leak", cost: 3, dmg: 5 },
+ { name: "🔄 Rollback Reality", cost: 2, dmg: 2 },
+
+ // 💙 SECRET CARD
+ { name: "💙 From the Dev Who Cares", cost: 0, dmg: 999, secret: true }
+];
+
+function startGame(){
+ drawCards();
+ updateUI();
+}
+
+function drawCards(){
+ hand.innerHTML = "";
+
+ deck.forEach(card=>{
+
+   // секретка появляется только если игрок почти проиграл
+   if(card.secret && playerHp > 5) return;
+
+   const el = document.createElement("div");
+   el.className = "card";
+
+   if(card.secret){
+     el.innerText = "??? (unknown artifact)";
+     el.style.border = "1px solid #ff4da6";
+     el.style.color = "#ff4da6";
+   } else {
+     el.innerText = `${card.name} (${card.cost})`;
+     if(card.dmg >= 5) el.classList.add("legendary");
+   }
+
+   el.onclick = ()=>playCard(card);
+   hand.appendChild(el);
+ });
+}
+
+function playCard(card){
+ if(mana < card.cost) return;
+
+ mana -= card.cost;
+
+ if(card.secret){
+   document.body.innerHTML = `
+     <div style="color:#ff4da6;font-family:monospace;padding:20px;">
+       <h1>💙 SECRET CARD ACTIVATED</h1>
+       <p>Artem...</p>
+       <p>ты держал систему до конца.</p>
+       <p>и это значит больше, чем победа.</p>
+       <br>
+       <p>— твой dev 🐻</p>
+     </div>
+   `;
+   return;
+ }
+
+ enemyHp -= card.dmg;
+
+ updateUI();
+
+ if(enemyHp <= 0){
+   win();
+ }
+}
+
+function enemyTurn(){
+ const dmg = 2 + Math.floor(turn/3);
+ playerHp -= dmg;
+
+ updateUI();
+
+ if(playerHp <= 0){
+   lose();
+ }
+}
+
+endTurnBtn.onclick = ()=>{
+ turn++;
+ mana++;
+
+ enemyTurn();
+ drawCards();
+ updateUI();
+};
+
+function updateUI(){
+ playerHpEl.innerText = playerHp;
+ enemyHpEl.innerText = enemyHp;
+ manaEl.innerText = mana;
+}
+
+function win(){
+ document.body.innerHTML = "<h1>🎉 VICTORY</h1><p>Artem defeated Production Server</p>";
+}
+
+function lose(){
+ document.body.innerHTML = "<h1>💀 SYSTEM CRASH</h1><p>Production Server won</p>";
+}
 </script>
 
 </body>
